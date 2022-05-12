@@ -1,45 +1,62 @@
 
-from selenium import webdriver
+import requests
 from bs4 import BeautifulSoup
-from selenium.webdriver.chrome.options import  Options
 import json
 import pprint
-import requests
-
-#prevent webdriver from opening a page
-chrome_options = Options()
-chrome_options.add_argument('--headless')
-#-------
-
-driver = webdriver.Chrome(options=chrome_options)
-url = "https://linktr.ee/therock"
-driver.maximize_window()
-driver.get(url)
-content = driver.page_source.encode('utf-8').strip()
-soup = BeautifulSoup(content,"html.parser")
+from lxml import etree
+from io import StringIO
 
 
-
-links = soup.find_all('a')
-tier = soup.find('script', {"id" : "__NEXT_DATA__"})
-# header = soup.find('div', class_ = 'sc-bdfBwQ Header__Grid-sc-i98650-0 llgrqs jvyDlw')
-
-data = json.loads(tier.text)
-tier = data.get('props',{}).get('pageProps',{}).get('account',{}).get('tier')
-pprint.pprint(tier)
+links = ['katyperry']
+full_names = []
+full_links = []
+tiers = []
+for ending_link in links:
 
 
+    url = f"https://linktr.ee/{ending_link}"
+    parser = etree.HTMLParser()
+    r = requests.get(url)
+    html = r.content.decode("utf-8")
+    tree = etree.parse(StringIO(html), parser=parser)
+    soup = BeautifulSoup(html,"html.parser")
 
-#taking the name form users
-name = soup.find('h1')
-print(name.text)
+
+    #get everything from the script
+    everything = soup.find('script', {"id" : "__NEXT_DATA__"})
+
+    #make the data to json
+    data = json.loads(everything.text)
 
 
-# # # taking links form users
-for link in links:
-    if 'href' in link.attrs:
-        print(link.attrs['href'])
+    #get the username 
+    name = data.get('props',{}).get('pageProps',{}).get('account',{}).get('pageTitle')
+    full_names.append(name)
+
+    #get all the social links
+    social_links = data.get('props',{}).get('pageProps',{}).get('account',{}).get("socialLinks")
     
+    for item in range(len(social_links)):
+        
+        linkce =  social_links[item-1].get('url')
+        full_links.append(linkce)
 
-    
-driver.quit()
+    #get the tier for the user
+    links = data.get('props',{}).get('pageProps',{}).get('account',{}).get("links")
+
+
+    for item in range(len(links)):
+        linkce = links[item-1].get('url')
+        full_links.append(linkce)
+
+
+    tier = data.get('props',{}).get('pageProps',{}).get('account',{}).get('tier')
+    tiers.append(tier)
+
+print(full_names)
+print(full_links)
+print(tiers)
+
+
+
+ 
